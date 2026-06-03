@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 project(TradingPlatform CXX)
 
+if (POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -37,8 +41,18 @@ target_link_libraries(trading_sim PRIVATE trading_core)
 enable_project_warnings(trading_sim)
 
 enable_testing()
+include(GoogleTest)
+include(FetchContent)
+
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+)
+FetchContent_MakeAvailable(googletest)
 
 add_executable(trading_tests tests/test_core.cpp)
-target_link_libraries(trading_tests PRIVATE trading_core)
+target_link_libraries(trading_tests PRIVATE trading_core GTest::gtest_main)
 enable_project_warnings(trading_tests)
-add_test(NAME trading_tests COMMAND trading_tests)
+gtest_discover_tests(trading_tests)

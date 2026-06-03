@@ -44,6 +44,8 @@ Lancer les tests :
 ctest --test-dir build --output-on-failure
 ```
 
+Les tests sont ecrits avec Google Test. CMake telecharge GoogleTest automatiquement via `FetchContent` dans le dossier de build.
+
 ## Utilisation
 
 Simulation par defaut :
