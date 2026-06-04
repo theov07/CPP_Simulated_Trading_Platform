@@ -2,6 +2,9 @@
 #include "MatchingEngine.hpp"
 #include "OrderBook.hpp"
 #include "Portfolio.hpp"
+#include "RiskMetrics.hpp"
+#include "Strategy.hpp"
+#include "StrategyEngine.hpp"
 #include "Types.hpp"
 
 #include <gtest/gtest.h>
@@ -23,6 +26,33 @@ std::filesystem::path write_temp_csv(const std::string& name, const std::string&
     file << content;
     return path;
 }
+
+class FixedSignalStrategy : public Strategy {
+public:
+    FixedSignalStrategy(Signal signal, OrderType type, int qty)
+        : signal_(signal), type_(type), qty_(qty) {}
+
+    Signal on_market_data(const MarketData&) override {
+        return signal_;
+    }
+
+    std::string name() const override {
+        return "FixedSignalStrategy";
+    }
+
+    OrderType preferred_order_type() const override {
+        return type_;
+    }
+
+    int quantity() const override {
+        return qty_;
+    }
+
+private:
+    Signal signal_;
+    OrderType type_;
+    int qty_;
+};
 }
 
 TEST(TypesTest, TrimHandlesEmptyStrings) {
@@ -181,4 +211,50 @@ TEST(PortfolioTest, RiskAndPnl) {
     EXPECT_DOUBLE_EQ(portfolio.cash(), 810.0);
     EXPECT_DOUBLE_EQ(portfolio.realized_pnl(), 10.0);
     EXPECT_DOUBLE_EQ(portfolio.equity(100.0), 1'010.0);
+}
+
+TEST(RiskMetricsTest, ComputesSharpeDrawdownAndWinRate) {
+    const std::vector<double> returns{0.01, -0.01, 0.02};
+    EXPECT_NEAR(RiskMetrics::compute_sharpe(returns), 6.92820323027551, 1e-9);
+
+    const std::vector<double> equity{100.0, 120.0, 90.0, 110.0, 80.0};
+    EXPECT_NEAR(RiskMetrics::compute_max_drawdown(equity), 1.0 / 3.0, 1e-12);
+
+    const std::vector<double> pnl_increments{1.0, -0.5, 0.0, 2.0};
+    EXPECT_NEAR(RiskMetrics::compute_win_rate(pnl_increments), 2.0 / 3.0, 1e-12);
+    EXPECT_DOUBLE_EQ(RiskMetrics::compute_avg_win(pnl_increments), 1.5);
+    EXPECT_DOUBLE_EQ(RiskMetrics::compute_avg_loss(pnl_increments), -0.5);
+}
+
+TEST(StrategyFactoryTest, CreatesSupportedAliases) {
+    EXPECT_EQ(make_strategy("momentum")->name(), "MomentumStrategy");
+    EXPECT_EQ(make_strategy("mean_reversion")->name(), "MeanReversionStrategy");
+    EXPECT_EQ(make_strategy("bollinger")->name(), "BollingerBandsStrategy");
+    EXPECT_EQ(make_strategy("ma_cross")->name(), "MovingAverageCrossStrategy");
+
+    EXPECT_EQ(make_strategy("meanreversion")->name(), "MeanReversionStrategy");
+    EXPECT_EQ(make_strategy("mr")->name(), "MeanReversionStrategy");
+    EXPECT_EQ(make_strategy("moving_average_cross")->name(), "MovingAverageCrossStrategy");
+
+    EXPECT_THROW(static_cast<void>(make_strategy("unknown_strategy")), std::runtime_error);
+}
+
+TEST(StrategyEngineTest, ConvertsSignalIntoOrder) {
+    StrategyEngine engine(std::make_unique<FixedSignalStrategy>(
+        Signal::Buy,
+        OrderType::Limit,
+        3
+    ));
+
+    const MarketData data{42, 99.5, 100.5, 100.0, 10};
+    const auto maybe_order = engine.maybe_create_order(data, data.timestamp);
+
+    ASSERT_TRUE(maybe_order.has_value());
+    EXPECT_EQ(maybe_order->order_id, 1000000u);
+    EXPECT_EQ(maybe_order->timestamp, 42);
+    EXPECT_EQ(maybe_order->side, Side::Bid);
+    EXPECT_EQ(maybe_order->type, OrderType::Limit);
+    EXPECT_DOUBLE_EQ(maybe_order->price, 100.5);
+    EXPECT_EQ(maybe_order->quantity, 3);
+    EXPECT_EQ(maybe_order->strategy_name, "FixedSignalStrategy");
 }
