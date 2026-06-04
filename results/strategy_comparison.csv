@@ -1,0 +1,7 @@
+dataset,strategy,trades,total_pnl,final_position,risk_rejects,liquidity_rejects,sharpe_ratio_annualized
+test_events.csv,momentum,117,-3.22,-8,76,2,-0.34796144
+test_events.csv,mean_reversion,142,-16.40,10,37,33,-1.54741005
+test_events.csv,bollinger,132,-16.96,6,6,22,-1.73985833
+test_events.csv,ma_cross,113,-1.94,-8,97,0,-0.44426875
+trend_events.csv,momentum,5,2.00,10,2,4,4.33910000
+mean_reversion_events.csv,mean_reversion,11,3.20,2,0,4,3.95060000
