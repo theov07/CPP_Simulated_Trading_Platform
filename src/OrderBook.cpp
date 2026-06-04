@@ -150,7 +150,8 @@ MarketData OrderBook::snapshot(std::int64_t ts) const {
 void OrderBook::display(int levels) const {
     std::cout << "\n========== ORDER BOOK ==========\n";
     std::cout << "ASKS\n";
-    for (int i = 0; i < std::min<int>(levels, static_cast<int>(asks_.size())); ++i) {
+    const int ask_levels = std::min<int>(levels, static_cast<int>(asks_.size()));
+    for (int i = ask_levels - 1; i >= 0; --i) {
         std::cout << std::setw(8) << asks_[i].order_id
                   << " | " << std::setw(10) << std::fixed << std::setprecision(2) << asks_[i].price
                   << " | " << std::setw(6) << asks_[i].quantity << "\n";
