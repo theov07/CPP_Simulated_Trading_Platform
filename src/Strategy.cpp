@@ -117,7 +117,7 @@ std::unique_ptr<Strategy> make_strategy(const std::string& strategy_name) {
         return std::make_unique<MomentumStrategy>(
             2,          // fast window
             3,          // slow window
-            0.001,      // epsilon très faible
+            0.001,      // very small epsilon
             2,          // qty
             OrderType::Market
         );
@@ -126,7 +126,7 @@ std::unique_ptr<Strategy> make_strategy(const std::string& strategy_name) {
     if (s == "mean_reversion" || s == "meanreversion" || s == "mr") {
         return std::make_unique<MeanReversionStrategy>(
             4,          // rolling window
-            0.3,        // seuil très bas
+            0.3,        // very low threshold
             2,          // qty
             OrderType::Market
         );

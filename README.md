@@ -1,8 +1,30 @@
-# Plateforme de Trading Simulee en C++17
+# C++17 Simulated Trading Platform
 
-Projet final de C++ pour la finance quantitative : simulation d'une plateforme de trading complete, depuis la lecture d'un flux de marche jusqu'au reporting post-trade.
+**Event-driven trading simulator with order book reconstruction, strategy execution, portfolio accounting, and post-trade risk reporting.**
 
-Le programme lit des evenements de carnet d'ordres depuis un CSV, maintient un `OrderBook`, genere des snapshots `MarketData`, applique une strategie de trading, execute les ordres via un moteur de matching, met a jour le portefeuille, puis produit des rapports console et CSV.
+*Academic project - Paris Dauphine University - C++ for Quantitative Finance*
+
+---
+
+## Overview
+
+This project simulates a complete trading workflow in C++17, from market event ingestion to post-trade reporting.
+
+The engine reads order book events from CSV files, maintains a limit order book, rebuilds `MarketData` snapshots, routes those snapshots to a polymorphic trading strategy, executes strategy orders through a matching engine, updates portfolio state, and exports console and CSV reports.
+
+**Key Features:**
+- CSV market event ingestion with `ADD` and `REMOVE` events
+- Limit order book with price-time priority
+- Market data snapshot generation after each book update
+- Pluggable trading strategies through a shared `Strategy` interface
+- Market and limit order matching with all-or-nothing execution
+- Portfolio accounting with cash, position, realized P&L, and total P&L
+- Pre-trade position risk checks
+- Risk metrics including Sharpe ratio, volatility, drawdown, win rate, and rejects
+- CSV exports for market data, trades, equity curve, and final risk report
+- Optional Python plotting script for visual analysis
+
+---
 
 ## Architecture
 
@@ -19,42 +41,48 @@ flowchart TD
     F --> J["risk_report.csv"]
 ```
 
-Flux principal :
+**Main flow:**
 
-1. `MarketDataFeed` lit `data/test_events.csv` ligne par ligne.
-2. `OrderBook` applique les `ADD` et `REMOVE`, trie les prix en price-time priority et genere un snapshot.
-3. `StrategyEngine` transmet le snapshot a une strategie polymorphique.
-4. Un signal `BUY` ou `SELL` devient un ordre `Market` ou `Limit`.
-5. `MatchingEngine` execute l'ordre en tout-ou-rien contre le carnet.
-6. `Portfolio` met a jour cash, position, P&L et applique la limite de position pre-trade.
-7. `Reporting` affiche les metriques finales et ecrit un rapport CSV.
+1. `MarketDataFeed` reads `data/test_events.csv` line by line.
+2. `OrderBook` applies `ADD` and `REMOVE` events, sorts price levels using price-time priority, and generates a snapshot.
+3. `StrategyEngine` forwards each snapshot to the selected polymorphic strategy.
+4. A `BUY` or `SELL` signal becomes a `Market` or `Limit` order.
+5. `MatchingEngine` executes the order all-or-nothing against the current book.
+6. `Portfolio` updates cash, position, P&L, and applies the pre-trade position limit.
+7. `Reporting` prints final metrics and writes a CSV risk report.
 
-## Build
+---
 
-Prerequis : CMake 3.15+ et un compilateur C++17.
+## Quick Start
+
+### Build
+
+Requirements:
+- CMake 3.15+
+- A C++17 compiler
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-Lancer les tests :
+### Run Tests
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-Les tests sont ecrits avec Google Test. CMake telecharge GoogleTest automatiquement via `FetchContent` dans le dossier de build.
+The tests use Google Test. CMake downloads GoogleTest automatically with `FetchContent` inside the build directory.
 
-## Utilisation
+### Run a Simulation
 
-Simulation par defaut :
+Default run:
 
 ```bash
 ./build/trading_sim
 ```
 
-Simulation avec fichier CSV et strategie explicites :
+Run with an explicit dataset and strategy:
 
 ```bash
 ./build/trading_sim data/test_events.csv momentum
@@ -63,40 +91,46 @@ Simulation avec fichier CSV et strategie explicites :
 ./build/trading_sim data/test_events.csv ma_cross
 ```
 
-Les fichiers generes sont dans `output/`. Ils sont versionnes dans ce depot a titre d'exemple de sortie et sont regeneres a chaque execution :
+---
 
-- `market_data.csv` : snapshots de marche.
-- `trades.csv` : trades executes par la strategie.
-- `equity_curve.csv` : evolution de l'equity, du P&L et de la position.
-- `risk_report.csv` : metriques finales.
+## Outputs
 
-Generer des graphiques a partir des CSV :
+Generated files are written to `output/`. They are included in this repository as example outputs and are regenerated on each run:
+
+- `market_data.csv`: reconstructed market snapshots
+- `trades.csv`: strategy order executions
+- `equity_curve.csv`: equity, P&L, and position over time
+- `risk_report.csv`: final performance and risk metrics
+
+Generate plots from the CSV outputs:
 
 ```bash
 python3 scripts/plot_results.py --input output --out output/plots
 ```
 
-Le script produit :
+The plotting script produces:
 
 - `equity_curve.png`
 - `pnl.png`
 - `market_and_trades.png`
 - `position.png`
 
-Le dossier `results/` contient seulement des exports courts et utiles a versionner :
+The `results/` directory contains compact reference exports that are useful to keep under version control:
 
-- `strategy_comparison.csv` : comparaison synthetique des strategies.
-- `momentum_risk_report.csv` : rapport final du run de reference `data/test_events.csv momentum`.
+- `strategy_comparison.csv`: summary comparison across strategies
+- `momentum_risk_report.csv`: final report for the reference run `data/test_events.csv momentum`
 
-Jeux de donnees disponibles :
+---
 
-- `data/test_events.csv` : dataset principal du projet.
-- `data/trend_events.csv` : petit scenario pedagogique de tendance haussiere.
-- `data/mean_reversion_events.csv` : petit scenario pedagogique oscillant autour d'une moyenne.
+## Datasets
 
-## Evenements
+Available input files:
 
-Format CSV attendu :
+- `data/test_events.csv`: main project dataset
+- `data/trend_events.csv`: small upward-trend teaching scenario
+- `data/mean_reversion_events.csv`: small mean-reversion teaching scenario
+
+Expected CSV format:
 
 ```csv
 timestamp,event_type,order_id,side,price,quantity
@@ -105,63 +139,71 @@ timestamp,event_type,order_id,side,price,quantity
 1700000003,REMOVE,1001,,,
 ```
 
-Types manipules :
+Core event and data types:
 
-- `OrderAdd` : `timestamp`, `order_id`, `side`, `price`, `quantity`.
-- `OrderRemove` : `timestamp`, `order_id`.
-- `MarketData` : genere par `OrderBook`, contient `timestamp`, `best_bid`, `best_ask`, `last_price`, `volume`.
-- `Order` : ordre de strategie avec `side`, `OrderType`, `price`, `quantity`.
-- `Trade` : execution produite par le matching engine.
+- `OrderAdd`: `timestamp`, `order_id`, `side`, `price`, `quantity`
+- `OrderRemove`: `timestamp`, `order_id`
+- `MarketData`: generated by `OrderBook`, with `timestamp`, `best_bid`, `best_ask`, `last_price`, and `volume`
+- `Order`: strategy order with `side`, `OrderType`, `price`, and `quantity`
+- `Trade`: execution produced by the matching engine
 
-Le feed ne fournit pas directement les snapshots de marche : ils sont reconstruits par le carnet apres chaque mise a jour.
+The feed does not provide market snapshots directly. Snapshots are rebuilt by the order book after each update.
 
-## Hypotheses de simulation
+---
 
-Le projet simule un seul instrument financier.
+## Simulation Assumptions
 
-Les `ADD` du feed representent des ordres externes qui alimentent le carnet. Si un `ADD` croise le meilleur prix oppose, le carnet l'execute immediatement contre la liquidite disponible avant d'ajouter le reliquat eventuel. Cela evite les etats impossibles avec `best_bid > best_ask`.
+The project simulates a single financial instrument.
 
-Les trades provoques par le feed servent a maintenir un carnet coherent et a mettre a jour `last_price`. Les trades exportes dans `trades.csv` correspondent uniquement aux executions des ordres de strategie.
+`ADD` events represent external orders feeding the book. If an `ADD` crosses the opposite best price, the book executes it immediately against available liquidity before adding any remaining quantity. This prevents impossible states such as `best_bid > best_ask`.
 
-Le champ `MarketData.volume` represente le volume de la derniere execution observee, pas un volume cumule depuis le debut de la simulation.
+Trades caused by feed events are used to keep the book consistent and update `last_price`. Trades exported to `trades.csv` correspond only to strategy order executions.
 
-Un `REMOVE` peut arriver apres qu'un ordre du feed a deja ete execute. Dans ce cas, il est ignore silencieusement. Un vrai `REMOVE` sur un identifiant jamais vu reste signale par un warning.
+`MarketData.volume` represents the size of the latest observed execution, not cumulative volume since the beginning of the simulation.
 
-Les parametres de risque sont fixes dans `main.cpp` : cash initial de 1 000 000 et position maximale absolue de 10.
+A `REMOVE` event can arrive after a feed order has already been executed. In that case, it is ignored silently. A true `REMOVE` for an unknown order id is still reported with a warning.
+
+Risk parameters are fixed in `main.cpp`: initial cash is 1,000,000 and the maximum absolute position is 10.
+
+---
 
 ## Strategies
 
-Toutes les strategies heritent de l'interface abstraite `Strategy`.
+All strategies inherit from the abstract `Strategy` interface.
 
-- `momentum` : compare deux moyennes mobiles courtes et longues. Signal `BUY` si la moyenne rapide depasse la lente, `SELL` dans le cas inverse.
-- `mean_reversion` : calcule un z-score sur une fenetre glissante. Signal `SELL` si le prix est trop haut par rapport a sa moyenne, `BUY` s'il est trop bas.
-- `bollinger` : variante mean reversion avec bandes de Bollinger.
-- `ma_cross` : moving average crossover plus long, utile pour comparer les resultats.
+- `momentum`: compares short and long moving averages. It emits `BUY` when the fast average is above the slow average, and `SELL` in the opposite case.
+- `mean_reversion`: computes a rolling z-score. It emits `SELL` when the price is high relative to its mean, and `BUY` when it is low.
+- `bollinger`: mean-reversion variant based on Bollinger Bands.
+- `ma_cross`: longer moving-average crossover, useful for comparing results.
 
-Les parametres actuels sont definis dans `make_strategy()` dans `src/Strategy.cpp`.
+Current strategy parameters are defined in `make_strategy()` in `src/Strategy.cpp`.
 
-## Matching et risque
+---
 
-Le matching respecte :
+## Matching And Risk
 
-- ordres `Market` et `Limit`;
-- execution tout-ou-rien pour les ordres de strategie;
-- price-time priority;
-- generation d'un ou plusieurs `Trade` si l'ordre traverse plusieurs niveaux.
+The matching engine supports:
 
-Le carnet traite aussi les `ADD` du feed qui croisent le marche : ils consomment la liquidite opposee avant qu'un reliquat eventuel soit ajoute au book. Cela evite les snapshots avec spread negatif.
+- `Market` and `Limit` orders
+- all-or-nothing execution for strategy orders
+- price-time priority
+- one or more `Trade` objects when an order crosses multiple price levels
 
-Le portefeuille applique une limite de position absolue avant chaque ordre de strategie. Si la limite est depassee, l'ordre est rejete et le compteur `Risk rejects` est incremente.
+The book also handles feed `ADD` events that cross the market. They consume opposite-side liquidity before any remaining quantity is added to the book. This prevents snapshots with a negative spread.
 
-## Exemple de resultat
+The portfolio applies an absolute position limit before each strategy order. If the limit would be exceeded, the order is rejected and the `Risk rejects` counter is incremented.
 
-Commande :
+---
+
+## Example Result
+
+Command:
 
 ```bash
 ./build/trading_sim data/test_events.csv momentum
 ```
 
-Sortie finale observee sur les donnees fournies :
+Observed final output on the provided dataset:
 
 ```text
 Final mark price            : 100.08
@@ -182,35 +224,41 @@ Risk rejects                : 76
 Liquidity rejects           : 2
 ```
 
-Sur ce run, aucun snapshot avec `best_bid > best_ask` n'est produit.
+On this run, no snapshot with `best_bid > best_ask` is produced.
 
-## Comparaison des strategies
+---
 
-Comparaison sur `data/test_events.csv` :
+## Strategy Comparison
 
-| Strategie | Trades | Total P&L | Position finale | Risk rejects | Liquidity rejects | Sharpe annualise |
+Comparison on `data/test_events.csv`:
+
+| Strategy | Trades | Total P&L | Final position | Risk rejects | Liquidity rejects | Annualized Sharpe |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `momentum` | 117 | -3.22 | -8 | 76 | 2 | -0.3480 |
 | `mean_reversion` | 142 | -16.40 | 10 | 37 | 33 | -1.5474 |
 | `bollinger` | 132 | -16.96 | 6 | 6 | 22 | -1.7399 |
 | `ma_cross` | 113 | -1.94 | -8 | 97 | 0 | -0.4443 |
 
-Ces strategies sont volontairement simples et servent surtout a demontrer l'architecture polymorphique, le matching et le reporting. Elles ne sont pas optimisees pour maximiser le P&L sur le dataset fourni.
+These strategies are intentionally simple. Their purpose is to demonstrate the architecture, polymorphism, matching, risk checks, and reporting pipeline. They are not optimized to maximize P&L on the provided dataset.
 
-## Ajouter une strategie
+---
 
-1. Creer une classe qui herite de `Strategy` dans `include/Strategy.hpp`.
-2. Implementer `on_market_data(const MarketData&)`, `name()`, `preferred_order_type()` et `quantity()`.
-3. Ajouter l'implementation dans `src/Strategy.cpp`.
-4. Ajouter un alias dans `make_strategy()`.
-5. Compiler puis lancer :
+## Add a Strategy
+
+1. Create a class that inherits from `Strategy` in `include/Strategy.hpp`.
+2. Implement `on_market_data(const MarketData&)`, `name()`, `preferred_order_type()`, and `quantity()`.
+3. Add the implementation in `src/Strategy.cpp`.
+4. Add an alias in `make_strategy()`.
+5. Build and run:
 
 ```bash
 cmake --build build
-./build/trading_sim data/test_events.csv nouvel_alias
+./build/trading_sim data/test_events.csv new_alias
 ```
 
-## Structure
+---
+
+## Project Structure
 
 ```text
 .

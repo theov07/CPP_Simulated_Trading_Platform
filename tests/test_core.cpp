@@ -86,7 +86,7 @@ TEST(MarketDataFeedTest, ParsesAddAndRemove) {
         const auto& remove = std::get<OrderRemove>(second);
         EXPECT_EQ(remove.timestamp, 1700000002);
         EXPECT_EQ(remove.order_id, 1001u);
-    }  // sur windows on peut pas remove tant que ifstream est ouvert 
+    }  // On Windows, the file cannot be removed while the ifstream is open.
 
     std::filesystem::remove(path);
 }

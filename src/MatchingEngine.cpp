@@ -50,7 +50,7 @@ std::vector<Trade> MatchingEngine::match(const Order& order) {
     }
 
     if (!can_fully_fill(order)) {
-        return trades; // tout ou rien : ordre rejeté
+        return trades; // All-or-nothing: order rejected.
     }
 
     int remaining = order.quantity;
