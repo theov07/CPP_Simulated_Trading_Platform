@@ -69,22 +69,24 @@ TEST(MarketDataFeedTest, ParsesAddAndRemove) {
         "1700000002,REMOVE,1001,,,\n"
     );
 
-    MarketDataFeed feed(path.string());
-    ASSERT_TRUE(feed.has_next());
+    {
+        MarketDataFeed feed(path.string());
+        ASSERT_TRUE(feed.has_next());
 
-    const FeedEvent first = feed.next_event();
-    const auto& add = std::get<OrderAdd>(first);
-    EXPECT_EQ(add.timestamp, 1700000001);
-    EXPECT_EQ(add.order_id, 1001u);
-    EXPECT_EQ(add.side, Side::Bid);
-    EXPECT_DOUBLE_EQ(add.price, 100.50);
-    EXPECT_EQ(add.quantity, 3);
+        const FeedEvent first = feed.next_event();
+        const auto& add = std::get<OrderAdd>(first);
+        EXPECT_EQ(add.timestamp, 1700000001);
+        EXPECT_EQ(add.order_id, 1001u);
+        EXPECT_EQ(add.side, Side::Bid);
+        EXPECT_DOUBLE_EQ(add.price, 100.50);
+        EXPECT_EQ(add.quantity, 3);
 
-    ASSERT_TRUE(feed.has_next());
-    const FeedEvent second = feed.next_event();
-    const auto& remove = std::get<OrderRemove>(second);
-    EXPECT_EQ(remove.timestamp, 1700000002);
-    EXPECT_EQ(remove.order_id, 1001u);
+        ASSERT_TRUE(feed.has_next());
+        const FeedEvent second = feed.next_event();
+        const auto& remove = std::get<OrderRemove>(second);
+        EXPECT_EQ(remove.timestamp, 1700000002);
+        EXPECT_EQ(remove.order_id, 1001u);
+    }  // sur windows on peut pas remove tant que ifstream est ouvert 
 
     std::filesystem::remove(path);
 }
@@ -96,18 +98,20 @@ TEST(MarketDataFeedTest, ReportsBadNumbers) {
         "1700000001,ADD,1001,ASK,not_a_price,3\n"
     );
 
-    MarketDataFeed feed(path.string());
-    EXPECT_THROW(
-        {
-            try {
-                static_cast<void>(feed.next_event());
-            } catch (const std::runtime_error& ex) {
-                EXPECT_NE(std::string(ex.what()).find("Invalid price at CSV line 2"), std::string::npos);
-                throw;
-            }
-        },
-        std::runtime_error
-    );
+    {
+        MarketDataFeed feed(path.string());
+        EXPECT_THROW(
+            {
+                try {
+                    static_cast<void>(feed.next_event());
+                } catch (const std::runtime_error& ex) {
+                    EXPECT_NE(std::string(ex.what()).find("Invalid price at CSV line 2"), std::string::npos);
+                    throw;
+                }
+            },
+            std::runtime_error
+        );
+    }  
 
     std::filesystem::remove(path);
 }
