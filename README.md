@@ -91,6 +91,22 @@ Run with an explicit dataset and strategy:
 ./build/trading_sim data/test_events.csv ma_cross
 ```
 
+### Launch Streamlit Dashboard
+
+The dashboard is written in Python with Streamlit, but the trading engine remains the compiled C++ executable. Streamlit runs `./build/trading_sim` through `subprocess`, then reads the CSV files generated in `output/`.
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app/app.py
+```
+
+Dashboard controls include:
+
+- dataset and strategy selection
+- C++ build and simulation run buttons
+- equity, P&L, position, drawdown, market data, and trade visualizations
+- final risk report and CSV download views
+
 ---
 
 ## Outputs
