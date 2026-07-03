@@ -4,6 +4,7 @@
 
 *Academic project - Paris Dauphine University - C++ for Quantitative Finance*
 
+https://cpp-simulated-trading-platform.streamlit.app/
 ---
 
 ## Overview
